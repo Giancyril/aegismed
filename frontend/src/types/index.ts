@@ -34,3 +34,6 @@ export interface JobStatus {
   message: string;
   modelName: string;
 }
+
+export type ViewportTool = 'windowLevel' | 'zoom' | 'pan' | 'crosshair' | 'measure' | 'probe';
+export type MprOrientation = 'axial' | 'coronal' | 'sagittal';

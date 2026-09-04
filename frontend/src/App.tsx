@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { ThumbnailPanel } from './components/ThumbnailPanel/ThumbnailPanel';
 import { Toolbar } from './components/Toolbar/Toolbar';
@@ -6,7 +6,8 @@ import { Viewport } from './components/Viewport/Viewport';
 import { SegmentationPanel } from './components/Segmentation/SegmentationPanel';
 import { JobStatusBar } from './components/JobStatus/JobStatusBar';
 import { UploadModal } from './components/Upload/UploadModal';
-import type { PatientInfo, SeriesInfo, SegmentationLabel, JobStatus } from './types';
+import { initCornerstone } from './services/cornerstoneInit';
+import type { PatientInfo, SeriesInfo, SegmentationLabel, JobStatus, ViewportTool, MprOrientation } from './types';
 
 export const App: React.FC = () => {
   const [patient] = useState<PatientInfo>({
@@ -38,6 +39,8 @@ export const App: React.FC = () => {
   ]);
 
   const [selectedSeriesUid, setSelectedSeriesUid] = useState<string>(seriesList[0].seriesInstanceUid);
+  const [activeTool, setActiveTool] = useState<ViewportTool>('windowLevel');
+  const [orientation, setOrientation] = useState<MprOrientation>('axial');
   const [activePreset, setActivePreset] = useState<string>('soft');
   const [sliceIndex, setSliceIndex] = useState<number>(42);
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
@@ -45,21 +48,39 @@ export const App: React.FC = () => {
   const [labels, setLabels] = useState<SegmentationLabel[]>([
     {
       id: 'spleen',
-      name: 'Spleen (MONAI)',
+      name: 'Spleen (MONAI Bundle)',
       color: '#8b5cf6',
       volumeCm3: 184.2,
       visible: true,
       opacity: 0.65,
-      confidence: 0.94,
+      confidence: 0.942,
     },
     {
       id: 'liver',
-      name: 'Liver (Atlas)',
+      name: 'Liver (Atlas Head)',
       color: '#3b82f6',
       volumeCm3: 1420.5,
       visible: true,
       opacity: 0.45,
-      confidence: 0.91,
+      confidence: 0.915,
+    },
+    {
+      id: 'kidneys',
+      name: 'Kidneys (Bilateral)',
+      color: '#10b981',
+      volumeCm3: 312.0,
+      visible: false,
+      opacity: 0.50,
+      confidence: 0.887,
+    },
+    {
+      id: 'pancreas',
+      name: 'Pancreas Head/Tail',
+      color: '#f59e0b',
+      volumeCm3: 84.6,
+      visible: false,
+      opacity: 0.55,
+      confidence: 0.854,
     },
   ]);
 
@@ -67,9 +88,14 @@ export const App: React.FC = () => {
     jobId: 'job_49a8f2',
     status: 'completed',
     progress: 100,
-    message: 'MONAI Spleen CT Segmentation completed (Latency: 1.4s)',
+    message: 'MONAI Spleen CT Segmentation completed (GPU Latency: 1.4s)',
     modelName: 'spleen_ct_segmentation:v1',
   });
+
+  useEffect(() => {
+    // Initialize Cornerstone3D engine
+    initCornerstone();
+  }, []);
 
   const handleToggleLabel = (id: string) => {
     setLabels((prev) =>
@@ -83,12 +109,19 @@ export const App: React.FC = () => {
     );
   };
 
-  const handleRunInference = () => {
+  const handleResetView = () => {
+    setActivePreset('soft');
+    setActiveTool('windowLevel');
+    setOrientation('axial');
+    setSliceIndex(Math.floor(seriesList[0].numSlices / 2));
+  };
+
+  const handleRunInference = async () => {
     setJobStatus({
       jobId: 'job_' + Math.random().toString(36).substring(7),
       status: 'preprocessing',
       progress: 25,
-      message: 'Applying MONAI transforms (resample 1.5mm, intensity scale)...',
+      message: 'Applying MONAI transforms (RAS reorientation, 1.5mm spacing)...',
       modelName: 'spleen_ct_segmentation:v1',
     });
 
@@ -96,8 +129,8 @@ export const App: React.FC = () => {
       setJobStatus((prev) => ({
         ...prev,
         status: 'inferring',
-        progress: 70,
-        message: 'Running SlidingWindowInferer on GPU...',
+        progress: 65,
+        message: 'Running SlidingWindowInferer on Modal GPU (T4)...',
       }));
 
       setTimeout(() => {
@@ -105,9 +138,13 @@ export const App: React.FC = () => {
           ...prev,
           status: 'completed',
           progress: 100,
-          message: 'Inference complete. NIfTI mask rendered.',
+          message: 'Inference complete. NIfTI organ masks rendered.',
         }));
-      }, 1000);
+        // Ensure segmented spleen is visible
+        setLabels((prev) =>
+          prev.map((l) => (l.id === 'spleen' ? { ...l, visible: true } : l))
+        );
+      }, 1200);
     }, 1000);
   };
 
@@ -124,16 +161,23 @@ export const App: React.FC = () => {
 
         <main className="flex-1 flex flex-col overflow-hidden bg-clinical-950">
           <Toolbar
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            orientation={orientation}
+            onSelectOrientation={setOrientation}
             activePreset={activePreset}
             onSelectPreset={setActivePreset}
             sliceIndex={sliceIndex}
             totalSlices={seriesList[0].numSlices}
             onSliceChange={setSliceIndex}
+            onResetView={handleResetView}
           />
           <Viewport
             sliceIndex={sliceIndex}
             totalSlices={seriesList[0].numSlices}
             activePreset={activePreset}
+            activeTool={activeTool}
+            orientation={orientation}
             labels={labels}
           />
         </main>
