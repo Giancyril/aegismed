@@ -5,6 +5,8 @@ import { Toolbar } from './components/Toolbar/Toolbar';
 import { Viewport } from './components/Viewport/Viewport';
 import { SegmentationPanel } from './components/Segmentation/SegmentationPanel';
 import { JobStatusBar } from './components/JobStatus/JobStatusBar';
+import { useJobStream } from './hooks/useJobStream';
+import { LiveProgressOverlay } from './components/LiveProgress/LiveProgressOverlay';
 import { UploadModal } from './components/Upload/UploadModal';
 import { initCornerstone } from './services/cornerstoneInit';
 import type { PatientInfo, SeriesInfo, SegmentationLabel, JobStatus, ViewportTool, MprOrientation } from './types';
@@ -84,6 +86,8 @@ export const App: React.FC = () => {
     },
   ]);
 
+  const [activeJobId, setActiveJobId] = useState<string>('job_49a8f2');
+  const stream = useJobStream(activeJobId);
   const [jobStatus, setJobStatus] = useState<JobStatus>({
     jobId: 'job_49a8f2',
     status: 'completed',
@@ -117,6 +121,8 @@ export const App: React.FC = () => {
   };
 
   const handleRunInference = async () => {
+    const newId = 'job_' + Math.random().toString(36).substring(7);
+    setActiveJobId(newId);
     setJobStatus({
       jobId: 'job_' + Math.random().toString(36).substring(7),
       status: 'preprocessing',
@@ -147,6 +153,19 @@ export const App: React.FC = () => {
       }, 1200);
     }, 1000);
   };
+
+  
+  // Synchronize WebSocket stream updates to local jobStatus state
+  useEffect(() => {
+    if (stream.stage && stream.stage !== 'idle') {
+      setJobStatus(prev => ({
+        ...prev,
+        status: stream.stage as any,
+        progress: stream.progress,
+        message: stream.message
+      }));
+    }
+  }, [stream.stage, stream.progress, stream.message]);
 
   return (
     <div className="flex flex-col h-screen w-screen bg-clinical-950 text-clinical-100 overflow-hidden font-sans">
@@ -191,7 +210,7 @@ export const App: React.FC = () => {
         />
       </div>
 
-      <JobStatusBar status={jobStatus} />
+      <JobStatusBar status={jobStatus} isStreaming={stream.isConnected} />
 
       <UploadModal
         isOpen={isUploadOpen}
