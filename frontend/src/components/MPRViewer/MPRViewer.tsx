@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MPRPanel } from './MPRPanel';
+import { useCrosshairSync } from '../../hooks/useCrosshairSync';
 import { LayoutGrid, Maximize2, RotateCcw } from 'lucide-react';
 
 interface MPRViewerProps {
@@ -13,33 +14,17 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
   windowWidth = 400,
   windowLevel = 40
 }) => {
-  // Orthogonal slice indexes (0 to 127)
-  const [axialIndex, setAxialIndex] = useState(64);
-  const [coronalIndex, setCoronalIndex] = useState(64);
-  const [sagittalIndex, setSagittalIndex] = useState(64);
+  const {
+    coord,
+    axialIndex,
+    coronalIndex,
+    sagittalIndex,
+    updateFromPlane,
+    setSliceIndex,
+    resetToCenter
+  } = useCrosshairSync(128);
 
-  // Synchronized 3D crosshair position normalized 0.0 to 1.0
-  const [crosshair, setCrosshair] = useState({ x: 0.5, y: 0.5, z: 0.5 });
   const [zoom, setZoom] = useState(1.0);
-
-  // When clicking on an axial panel (X, Y), update Sagittal (X) and Coronal (Y)
-  const handleAxialClick = (x: number, y: number) => {
-    setCrosshair(prev => ({ ...prev, x, y }));
-    setSagittalIndex(Math.floor(x * 128));
-    setCoronalIndex(Math.floor(y * 128));
-  };
-
-  const handleCoronalClick = (x: number, z: number) => {
-    setCrosshair(prev => ({ ...prev, x, z }));
-    setSagittalIndex(Math.floor(x * 128));
-    setAxialIndex(Math.floor(z * 128));
-  };
-
-  const handleSagittalClick = (y: number, z: number) => {
-    setCrosshair(prev => ({ ...prev, y, z }));
-    setCoronalIndex(Math.floor(y * 128));
-    setAxialIndex(Math.floor(z * 128));
-  };
 
   return (
     <div className="flex-1 flex flex-col bg-[#07090e] border border-clinical-750 overflow-hidden select-none">
@@ -57,10 +42,7 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           <span>W/L: <strong className="text-clinical-100">{windowWidth}/{windowLevel}</strong></span>
           <button
             onClick={() => {
-              setCrosshair({ x: 0.5, y: 0.5, z: 0.5 });
-              setAxialIndex(64);
-              setCoronalIndex(64);
-              setSagittalIndex(64);
+              resetToCenter();
               setZoom(1.0);
             }}
             title="Reset Crosshairs"
@@ -82,9 +64,9 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           windowWidth={windowWidth}
           windowLevel={windowLevel}
           zoom={zoom}
-          crosshair={{ x: crosshair.x, y: crosshair.y }}
-          onSliceChange={setAxialIndex}
-          onCrosshairMove={handleAxialClick}
+          crosshair={{ x: coord.x, y: coord.y }}
+          onSliceChange={(idx) => setSliceIndex('axial', idx)}
+          onCrosshairMove={(x, y) => updateFromPlane('axial', x, y)}
           seriesInstanceUid={seriesInstanceUid}
         />
 
@@ -96,9 +78,9 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           windowWidth={windowWidth}
           windowLevel={windowLevel}
           zoom={zoom}
-          crosshair={{ x: crosshair.x, y: crosshair.z }}
-          onSliceChange={setCoronalIndex}
-          onCrosshairMove={handleCoronalClick}
+          crosshair={{ x: coord.x, y: coord.z }}
+          onSliceChange={(idx) => setSliceIndex('coronal', idx)}
+          onCrosshairMove={(x, z) => updateFromPlane('coronal', x, z)}
           seriesInstanceUid={seriesInstanceUid}
         />
 
@@ -110,9 +92,9 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           windowWidth={windowWidth}
           windowLevel={windowLevel}
           zoom={zoom}
-          crosshair={{ x: crosshair.y, y: crosshair.z }}
-          onSliceChange={setSagittalIndex}
-          onCrosshairMove={handleSagittalClick}
+          crosshair={{ x: coord.y, y: coord.z }}
+          onSliceChange={(idx) => setSliceIndex('sagittal', idx)}
+          onCrosshairMove={(y, z) => updateFromPlane('sagittal', y, z)}
           seriesInstanceUid={seriesInstanceUid}
         />
 
