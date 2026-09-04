@@ -277,6 +277,31 @@ export const Viewport: React.FC<ViewportProps> = ({
             />
           )}
 
+                    {/* Persistent Annotation Shapes (Polygon & Angle) */}
+          <g id="polygon-annotations">
+            {/* Example seed polygon: Liver ROI */}
+            <polygon
+              points="140,210 180,180 230,220 200,270 150,260"
+              fill="#10b981"
+              fillOpacity="0.15"
+              stroke="#10b981"
+              strokeWidth="1.5"
+              strokeDasharray="4,2"
+            />
+            <text x="170" y="235" fill="#34d399" fontSize="11" fontFamily="JetBrains Mono, monospace" fontWeight="bold">
+              ROI: 42.8 cm²
+            </text>
+          </g>
+
+          {/* Seed Cobb / Diagnostic Angle */}
+          <g id="angle-annotations" stroke="#fbbf24" strokeWidth="1.5">
+            <polyline points="220,360 256,386 290,360" fill="none" />
+            <circle cx="256" cy="386" r="3.5" fill="#fbbf24" />
+            <text x="246" y="375" fill="#fde047" fontSize="11" fontFamily="JetBrains Mono, monospace" fontWeight="bold">
+              52.4°
+            </text>
+          </g>
+
           {/* Active Crosshair Tool */}
           {activeTool === 'crosshair' && (
             <g stroke="#818cf8" strokeWidth="1" strokeDasharray="3,3" opacity="0.8">

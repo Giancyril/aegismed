@@ -9,6 +9,8 @@ import { useJobStream } from './hooks/useJobStream';
 import { LiveProgressOverlay } from './components/LiveProgress/LiveProgressOverlay';
 import { MetadataExplorer } from './components/MetadataExplorer/MetadataExplorer';
 import { MPRViewer } from './components/MPRViewer/MPRViewer';
+import { AnnotationToolbar, type AnnotationToolMode } from './components/Annotations/AnnotationToolbar';
+import { useAnnotations } from './hooks/useAnnotations';
 import { UploadModal } from './components/Upload/UploadModal';
 import { initCornerstone } from './services/cornerstoneInit';
 import type { PatientInfo, SeriesInfo, SegmentationLabel, JobStatus, ViewportTool, MprOrientation } from './types';
@@ -91,6 +93,8 @@ export const App: React.FC = () => {
   const [activeJobId, setActiveJobId] = useState<string>('job_49a8f2');
   const [rightPanelTab, setRightPanelTab] = useState<'segmentation' | 'metadata'>('segmentation');
   const [viewMode, setViewMode] = useState<'single' | 'mpr'>('single');
+  const [annMode, setAnnMode] = useState<AnnotationToolMode>('caliper');
+  const { annotations, addAnnotation, clearAnnotations, exportAnnotations } = useAnnotations(selectedSeries?.seriesInstanceUid);
   const stream = useJobStream(activeJobId);
   const [jobStatus, setJobStatus] = useState<JobStatus>({
     jobId: 'job_49a8f2',
@@ -183,6 +187,15 @@ export const App: React.FC = () => {
         />
 
         <main className="flex-1 flex flex-col overflow-hidden bg-clinical-950">
+          <div className="px-3 py-1.5 bg-clinical-950 flex items-center justify-between border-b border-clinical-800">
+            <AnnotationToolbar
+              activeMode={annMode}
+              onSelectMode={setAnnMode}
+              annotationCount={annotations.length}
+              onClearAnnotations={clearAnnotations}
+              onExportAnnotations={exportAnnotations}
+            />
+          </div>
           <Toolbar
             activeTool={activeTool}
             onSelectTool={setActiveTool}
