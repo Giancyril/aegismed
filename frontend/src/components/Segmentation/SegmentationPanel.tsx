@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrainCircuit, Eye, EyeOff, Sliders, Cpu, Play, BarChart3 } from 'lucide-react';
 import type { SegmentationLabel, JobStatus } from '../../types';
+import { OrganStatsTable } from './OrganStatsTable';
 
 interface SegmentationPanelProps {
   labels: SegmentationLabel[];
