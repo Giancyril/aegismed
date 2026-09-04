@@ -86,7 +86,7 @@ def get_study_metadata(
     # Fallback or synthetic default tags if no disk file found
     if not tags:
         tags = [
-            {"tag": "(0010,0010)", "vr": "PN", "keyword": "PatientName", "name": "Patient's Name", "value": study.patient_name or "ANONYMOUS"},
+            {"tag": "(0010,0010)", "vr": "PN", "keyword": "PatientName", "name": "Patient's Name", "value": (study.patient.pseudonym if study.patient else "ANONYMOUS")},
             {"tag": "(0010,0020)", "vr": "LO", "keyword": "PatientID", "name": "Patient ID", "value": study.patient_id or "SUBJ-9921"},
             {"tag": "(0020,000D)", "vr": "UI", "keyword": "StudyInstanceUID", "name": "Study Instance UID", "value": study.study_instance_uid},
             {"tag": "(0008,0060)", "vr": "CS", "keyword": "Modality", "name": "Modality", "value": study.modalities or "CT"},
@@ -106,7 +106,7 @@ def get_study_metadata(
         "study_instance_uid": study_instance_uid,
         "modules": grouped_modules,
         "patient_id": study.patient_id,
-        "patient_name": study.patient_name,
+        "patient_name": study.patient.pseudonym if study.patient else "ANONYMOUS",
         "modality": study.modalities,
         "total_tags": len(tags),
         "tags": processed_tags,
