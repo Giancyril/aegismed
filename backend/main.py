@@ -1,4 +1,5 @@
-from app.api.ws_jobs import router as ws_router
+from app.api.ws_jobs import router as ws_router, set_main_loop
+import asyncio
 import os
 import uvicorn
 from fastapi import FastAPI, Request
@@ -14,12 +15,20 @@ for path in [settings.STORAGE_DIR, settings.UPLOAD_DIR, settings.NIFTI_DIR, sett
 
 init_db()
 
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
+
+@app.on_event("startup")
+async def on_startup():
+    loop = asyncio.get_running_loop()
+    set_main_loop(loop)
+
 
 # Request Tracing Middleware
 app.add_middleware(RequestTracingMiddleware)
