@@ -116,3 +116,85 @@ def delete_annotation(annotation_id: str, db: Session = Depends(get_db)):
     db.delete(ann)
     db.commit()
     return {"status": "deleted", "id": annotation_id}
+
+@router.get("/series/{series_instance_uid}/annotations/export")
+def export_annotations(
+    series_instance_uid: str,
+    format: str = "json", # "json" or "sr" (DICOM Structured Report TID 1500)
+    db: Session = Depends(get_db)
+):
+    """Exports clinical measurements as either pure JSON or DICOM SR TID 1500 structured hierarchy."""
+    series = db.query(Series).filter_by(series_instance_uid=series_instance_uid).first()
+    if not series:
+        raise HTTPException(status_code=404, detail="Series not found")
+
+    annotations = db.query(Annotation).filter_by(series_instance_uid=series_instance_uid).all()
+
+    if format.lower() == "sr":
+        # DICOM Structured Report TID 1500 (Measurement Report) Model
+        sr_measurements = []
+        for a in annotations:
+            code_value = "G-D7FE" if a.annotation_type == "caliper" else "G-A166" if a.annotation_type == "polygon" else "G-A169"
+            code_meaning = "Length" if a.annotation_type == "caliper" else "Area" if a.annotation_type == "polygon" else "Angle"
+            sr_measurements.append({
+                "RelationshipType": "CONTAINS",
+                "ValueType": "NUM",
+                "ConceptNameCodeSequence": [{
+                    "CodeValue": code_value,
+                    "CodingSchemeDesignator": "SRT",
+                    "CodeMeaning": code_meaning
+                }],
+                "MeasuredValueSequence": [{
+                    "NumericValue": a.measurement_value,
+                    "MeasurementUnitsCodeSequence": [{
+                        "CodeValue": a.unit,
+                        "CodingSchemeDesignator": "UCUM",
+                        "CodeMeaning": a.unit
+                    }]
+                }],
+                "ContentSequence": [
+                    {
+                        "RelationshipType": "HAS CONCEPT MOD",
+                        "ValueType": "TEXT",
+                        "ConceptNameCodeSequence": [{"CodeValue": "121071", "CodingSchemeDesignator": "DCM", "CodeMeaning": "Finding"}],
+                        "TextValue": a.label
+                    }
+                ],
+                "SourceAnnotationID": a.id,
+                "Geometry": a.geometry,
+                "Plane": a.plane,
+                "SliceIndex": a.slice_index
+            })
+
+        return {
+            "SOPClassUID": "1.2.840.10008.5.1.4.1.1.88.22", # Comprehensive 3D SR
+            "TemplateID": "TID 1500",
+            "TemplateName": "Measurement Report",
+            "SeriesInstanceUID": series_instance_uid,
+            "StudyInstanceUID": series.study_instance_uid,
+            "MeasurementCount": len(sr_measurements),
+            "DocumentTitle": "IMAGING MEASUREMENT REPORT (DICOM SR)",
+            "ContentTree": sr_measurements
+        }
+
+    # Standard JSON export
+    return {
+        "series_instance_uid": series_instance_uid,
+        "export_format": "json",
+        "total_annotations": len(annotations),
+        "annotations": [
+            {
+                "id": a.id,
+                "type": a.annotation_type,
+                "label": a.label,
+                "value": a.measurement_value,
+                "unit": a.unit,
+                "plane": a.plane,
+                "slice_index": a.slice_index,
+                "geometry": a.geometry,
+                "color": a.color,
+                "created_at": a.created_at.isoformat() if a.created_at else None
+            }
+            for a in annotations
+        ]
+    }
