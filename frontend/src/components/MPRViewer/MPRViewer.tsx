@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { MPRPanel } from './MPRPanel';
 import { useCrosshairSync } from '../../hooks/useCrosshairSync';
-import { LayoutGrid, Maximize2, RotateCcw } from 'lucide-react';
+import { LayoutGrid, Maximize2, RotateCcw, Sliders } from 'lucide-react';
+
+const PRESETS = [
+  { id: 'soft', name: 'Soft Tissue', w: 400, l: 40 },
+  { id: 'bone', name: 'Bone', w: 1800, l: 400 },
+  { id: 'lung', name: 'Lung', w: 1500, l: -600 },
+  { id: 'liver', name: 'Liver', w: 150, l: 30 }
+];
+
 
 interface MPRViewerProps {
   seriesInstanceUid?: string;
@@ -25,6 +33,17 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
   } = useCrosshairSync(128);
 
   const [zoom, setZoom] = useState(1.0);
+  const [activePreset, setActivePreset] = useState('soft');
+  const [wl, setWl] = useState({ w: windowWidth, l: windowLevel });
+
+  const applyPreset = (presetId: string) => {
+    const p = PRESETS.find(x => x.id === presetId);
+    if (p) {
+      setActivePreset(p.id);
+      setWl({ w: p.w, l: p.l });
+    }
+  };
+
 
   return (
     <div className="flex-1 flex flex-col bg-[#07090e] border border-clinical-750 overflow-hidden select-none">
@@ -39,6 +58,23 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
         </div>
 
         <div className="flex items-center space-x-3 text-[11px]">
+        <div className="flex items-center space-x-2">
+          <span className="text-[11px] text-clinical-400 font-mono">Preset:</span>
+          {PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => applyPreset(p.id)}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                activePreset === p.id
+                  ? 'bg-indigo-600 text-white font-bold'
+                  : 'bg-clinical-800 text-clinical-400 hover:text-clinical-200'
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+
           <span>W/L: <strong className="text-clinical-100">{windowWidth}/{windowLevel}</strong></span>
           <button
             onClick={() => {
@@ -61,8 +97,8 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           plane="axial"
           sliceIndex={axialIndex}
           totalSlices={128}
-          windowWidth={windowWidth}
-          windowLevel={windowLevel}
+          windowWidth={wl.w}
+          windowLevel={wl.l}
           zoom={zoom}
           crosshair={{ x: coord.x, y: coord.y }}
           onSliceChange={(idx) => setSliceIndex('axial', idx)}
@@ -75,8 +111,8 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           plane="coronal"
           sliceIndex={coronalIndex}
           totalSlices={128}
-          windowWidth={windowWidth}
-          windowLevel={windowLevel}
+          windowWidth={wl.w}
+          windowLevel={wl.l}
           zoom={zoom}
           crosshair={{ x: coord.x, y: coord.z }}
           onSliceChange={(idx) => setSliceIndex('coronal', idx)}
@@ -89,8 +125,8 @@ export const MPRViewer: React.FC<MPRViewerProps> = ({
           plane="sagittal"
           sliceIndex={sagittalIndex}
           totalSlices={128}
-          windowWidth={windowWidth}
-          windowLevel={windowLevel}
+          windowWidth={wl.w}
+          windowLevel={wl.l}
           zoom={zoom}
           crosshair={{ x: coord.y, y: coord.z }}
           onSliceChange={(idx) => setSliceIndex('sagittal', idx)}
