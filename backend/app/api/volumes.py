@@ -1,3 +1,4 @@
+from app.services.slice_renderer import render_slice_to_png, WINDOW_PRESETS
 import io
 import os
 import numpy as np
@@ -62,40 +63,26 @@ def get_volume_slice(
     if not series:
         raise HTTPException(status_code=404, detail="Series not found")
 
-    # Generate synthetic anatomically-proportioned slice if file does not exist on disk
+    # Load or synthesize 3D volume
     if not series.nifti_volume_path or not os.path.exists(series.nifti_volume_path):
-        data = np.zeros((128, 128), dtype=np.float32)
-        y, x = np.ogrid[:128, :128]
-        mask = (x - 64)**2 + (y - 64)**2 <= 45**2
-        data[mask] = 50.0  # soft tissue HU
-        data[((x - 64)**2 + (y - 80)**2 <= 10**2)] = 300.0  # vertebral bone
+        vol = np.zeros((128, 128, 128), dtype=np.float32)
+        z, y, x = np.ogrid[:128, :128, :128]
+        torso = ((x - 64)/45)**2 + ((y - 64)/35)**2 + ((z - 64)/55)**2 <= 1.0
+        vol[torso] = 45.0  # soft tissue HU
+        spine = ((x - 64)**2 + (y - 90)**2 <= 8**2) & (z >= 20) & (z <= 110)
+        vol[spine] = 450.0 # spine bone HU
     else:
         try:
             nii = nib.load(series.nifti_volume_path)
             vol = nii.get_fdata(dtype=np.float32)
-
-            if plane == "axial":
-                idx = min(max(0, index), vol.shape[2] - 1)
-                data = vol[:, :, idx]
-            elif plane == "coronal":
-                idx = min(max(0, index), vol.shape[1] - 1)
-                data = vol[:, idx, :]
-            else: # sagittal
-                idx = min(max(0, index), vol.shape[0] - 1)
-                data = vol[idx, :, :]
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Slice extraction failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to load NIfTI volume: {str(e)}")
 
-    # Apply HU Window / Level normalization
-    lower = window_level - (window_width / 2.0)
-    upper = window_level + (window_width / 2.0)
-    windowed = np.clip(data, lower, upper)
-    normalized = ((windowed - lower) / (upper - lower + 1e-6) * 255.0).astype(np.uint8)
-
-    # Encode to PNG buffer
-    img = Image.fromarray(normalized)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    buf.seek(0)
-
-    return StreamingResponse(buf, media_type="image/png")
+    png_bytes = render_slice_to_png(
+        volume=vol,
+        plane=plane,
+        index=index,
+        window_width=window_width,
+        window_level=window_level
+    )
+    return StreamingResponse(io.BytesIO(png_bytes), media_type="image/png")
