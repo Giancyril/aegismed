@@ -1,4 +1,38 @@
 from app.services.tag_classifier import enrich_and_group_tags
+
+PHI_TAG_MAP = {
+    "(0010,0010)": "ANONYMIZED^PATIENT",
+    "(0010,0020)": "ANON-XXXX",
+    "(0010,0030)": "19000101",
+    "(0010,0032)": "000000",
+    "(0010,1010)": "000Y",
+    "(0008,0080)": "DE-IDENTIFIED CLINICAL CENTER",
+    "(0008,1040)": "CLINICAL IMAGING CORE",
+    "(0008,0090)": "ANONYMIZED^PHYSICIAN",
+    "(0008,1050)": "ANONYMIZED^PHYSICIAN",
+    "(0008,1060)": "ANONYMIZED^PHYSICIAN",
+    "(0008,1070)": "ANONYMIZED^OPERATOR"
+}
+
+def apply_phi_redaction(tags: list, redact: bool = True) -> list:
+    """Applies PS 3.15 standard de-identification masking to sensitive attributes."""
+    redacted = []
+    for item in tags:
+        tag_hex = item.get("tag", "").upper()
+        is_phi = tag_hex in PHI_TAG_MAP or "Patient" in item.get("keyword", "") or "Physician" in item.get("keyword", "")
+        item_copy = dict(item)
+        item_copy["is_phi"] = is_phi
+        if redact and is_phi:
+            if tag_hex in PHI_TAG_MAP:
+                item_copy["value"] = PHI_TAG_MAP[tag_hex]
+            else:
+                item_copy["value"] = "[REDACTED_PHI]"
+            item_copy["redacted"] = True
+        else:
+            item_copy["redacted"] = False
+        redacted.append(item_copy)
+    return redacted
+
 import os
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -12,6 +46,7 @@ router = APIRouter(tags=["DICOM Metadata"])
 @router.get("/studies/{study_instance_uid}/metadata")
 def get_study_metadata(
     study_instance_uid: str,
+    redact_phi: bool = Query(True, description="Mask Patient Health Information tags (PS 3.15)"),
     db: Session = Depends(get_db)
 ):
     """Extracts raw DICOM tags for an ingested study."""
@@ -65,7 +100,8 @@ def get_study_metadata(
             {"tag": "(0028,0030)", "vr": "DS", "keyword": "PixelSpacing", "name": "Pixel Spacing", "value": "0.75\0.75"}
         ]
 
-    grouped_modules = enrich_and_group_tags(tags)
+    processed_tags = apply_phi_redaction(tags, redact=redact_phi)
+    grouped_modules = enrich_and_group_tags(processed_tags)
     return {
         "study_instance_uid": study_instance_uid,
         "modules": grouped_modules,
@@ -73,5 +109,6 @@ def get_study_metadata(
         "patient_name": study.patient_name,
         "modality": study.modalities,
         "total_tags": len(tags),
-        "tags": tags
+        "tags": processed_tags,
+        "redact_phi_active": redact_phi
     }
