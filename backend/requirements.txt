@@ -12,3 +12,5 @@ boto3>=1.34.0
 requests>=2.31.0
 pytest>=8.0.0
 httpx>=0.27.0
+
+reportlab>=5.0.0
