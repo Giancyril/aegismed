@@ -58,3 +58,37 @@ async def websocket_job_progress(websocket: WebSocket, job_id: str):
                 pass
     except WebSocketDisconnect:
         await ws_manager.disconnect(job_id, websocket)
+
+_main_loop = None
+
+def set_main_loop(loop):
+    global _main_loop
+    _main_loop = loop
+
+def notify_job_stage(job_id: str, stage: str, progress: int, message: str, metrics: dict = None, error: str = None):
+    """Thread-safe synchronous bridge to broadcast job events to active WebSocket clients."""
+    event = {
+        "type": "stage_update",
+        "job_id": job_id,
+        "stage": stage,
+        "progress": progress,
+        "message": message,
+        "metrics": metrics or {},
+        "error": error
+    }
+    try:
+        loop = None
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = _main_loop
+
+        if loop and loop.is_running():
+            asyncio.run_coroutine_threadsafe(ws_manager.broadcast_job_event(job_id, event), loop)
+        else:
+            # If no running loop, create one temporarily
+            new_loop = asyncio.new_event_loop()
+            new_loop.run_until_complete(ws_manager.broadcast_job_event(job_id, event))
+            new_loop.close()
+    except Exception as exc:
+        print(f"[WebSocket] Event dispatch notice: {exc}")

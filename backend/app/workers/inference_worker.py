@@ -1,3 +1,4 @@
+from app.api.ws_jobs import notify_job_stage
 import os
 import sys
 import time
@@ -32,6 +33,7 @@ def process_inference_job(job_id: str):
         job.progress = 25
         job.message = "Applying MONAI transforms: reorientation to RAS, 1.5mm resampling, HU windowing..."
         db.commit()
+        notify_job_stage(job_id, "preprocessing", 25, job.message)
         time.sleep(0.5)
 
         # Stage 2: Inference (Sliding Window Engine)
@@ -39,6 +41,7 @@ def process_inference_job(job_id: str):
         job.progress = 60
         job.message = "Running MONAI 3D sliding-window inference with Gaussian patch aggregation..."
         db.commit()
+        notify_job_stage(job_id, "inferring", 60, job.message)
 
         mask_output_path = os.path.join(settings.MASKS_DIR, f"{series.series_instance_uid}_mask.nii.gz")
 
@@ -67,6 +70,7 @@ def process_inference_job(job_id: str):
             "model": result["model"]
         }
         db.commit()
+        notify_job_stage(job_id, "completed", 100, job.message, metrics=job.metrics)
 
     except Exception as e:
         if job:
@@ -74,5 +78,6 @@ def process_inference_job(job_id: str):
             job.error = str(e)
             job.message = f"Inference pipeline failed: {str(e)}"
             db.commit()
+            notify_job_stage(job_id, "failed", 100, job.message, error=str(e))
     finally:
         db.close()
