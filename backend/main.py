@@ -3,11 +3,15 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
+from app.core.database import init_db
 from app.api.routes import router as api_router
 
 # Ensure storage directories exist
 for path in [settings.STORAGE_DIR, settings.UPLOAD_DIR, settings.NIFTI_DIR, settings.MASKS_DIR]:
     os.makedirs(path, exist_ok=True)
+
+# Initialize database tables
+init_db()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -16,7 +20,6 @@ app = FastAPI(
     redoc_url=f"{settings.API_V1_STR}/redoc",
 )
 
-# Set all CORS enabled origins for clinical viewer
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

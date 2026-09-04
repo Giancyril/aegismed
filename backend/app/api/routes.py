@@ -1,6 +1,9 @@
 from fastapi import APIRouter
+from app.api.ingestion import router as ingestion_router
 
 router = APIRouter()
+
+router.include_router(ingestion_router)
 
 @router.get("/health", tags=["System"])
 async def health_check():

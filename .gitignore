@@ -67,3 +67,8 @@ monai_bundles/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
