@@ -1,3 +1,4 @@
+from app.api.ws_jobs import router as ws_router
 import os
 import uvicorn
 from fastapi import FastAPI, Request
@@ -48,6 +49,8 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(ws_router)
+app.include_router(ws_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
