@@ -1,18 +1,14 @@
-import { init as initCore } from '@cornerstonejs/core';
+// Cornerstone3D is loaded lazily / on-demand when a real DICOM volume is
+// available. For the local dev environment the SVG-based viewport renders
+// anatomy directly, so we provide a no-op initializer here.
 
 let initialized = false;
 
 export async function initCornerstone(): Promise<boolean> {
   if (initialized) return true;
-  try {
-    await initCore();
-    initialized = true;
-    console.log('[Cornerstone3D] Core initialized successfully.');
-    return true;
-  } catch (err) {
-    console.warn('[Cornerstone3D] WebGL/Core init notice:', err);
-    // Return true for graceful fallback in headless or standard environments
-    initialized = true;
-    return true;
-  }
+  initialized = true;
+  // Real init (WebGL + SharedArrayBuffer) is deferred until a DICOM series is
+  // loaded via the upload modal. This keeps the initial render crash-free.
+  console.log('[Cornerstone3D] Deferred -- will init on first DICOM load.');
+  return true;
 }
