@@ -94,11 +94,49 @@ export const MetadataExplorer: React.FC<MetadataExplorerProps> = ({
   };
 
   const handleCopy = (tag: DicomTag) => {
-    const text = `${tag.tag} ${tag.keyword} [${tag.vr}]: ${tag.value}`;
+    const text = `${tag.tag} ${tag.keyword} [${tag.vr}]: ${highlightMatch(tag.value, searchTerm)}`;
     navigator.clipboard?.writeText(text);
     setCopiedTag(tag.tag);
     setTimeout(() => setCopiedTag(null), 2000);
   };
+
+  
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const parts = text.split(new RegExp(`(${query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase() ? (
+        <span key={i} className="bg-amber-400/20 text-amber-300 font-bold px-0.5 rounded">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
+    // Filter modules based on search term
+  const filteredModules: Record<string, DicomTag[]> = {};
+  const query = searchTerm.toLowerCase().trim();
+
+  Object.entries(modules).forEach(([modName, tags]) => {
+    if (!query) {
+      filteredModules[modName] = tags;
+    } else {
+      const matchingTags = tags.filter(t =>
+        t.keyword.toLowerCase().includes(query) ||
+        t.tag.toLowerCase().includes(query) ||
+        t.name.toLowerCase().includes(query) ||
+        t.value.toLowerCase().includes(query) ||
+        t.vr.toLowerCase().includes(query)
+      );
+      if (matchingTags.length > 0) {
+        filteredModules[modName] = matchingTags;
+      }
+    }
+  });
+
+  const matchingTagCount = Object.values(filteredModules).reduce((acc, list) => acc + list.length, 0);
 
   const totalTagCount = Object.values(modules).reduce((acc, list) => acc + list.length, 0);
 
@@ -126,13 +164,35 @@ export const MetadataExplorer: React.FC<MetadataExplorerProps> = ({
         )}
       </div>
 
+            {/* Search Bar */}
+      <div className="p-3 border-b border-clinical-750 bg-clinical-900/40">
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-clinical-400" />
+          <input
+            type="text"
+            placeholder="Search tags by keyword, hex, VR, value..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-clinical-950/80 border border-clinical-700/80 rounded pl-8 pr-3 py-1.5 text-xs text-clinical-100 placeholder-clinical-500 focus:outline-none focus:border-indigo-500 font-mono"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-clinical-500 hover:text-clinical-300 text-xs"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Accordion Module List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {loading ? (
           <div className="p-4 text-center text-xs font-mono text-clinical-400">Loading DICOM tags...</div>
         ) : (
-          Object.entries(modules).map(([moduleName, tags]) => {
-            const isClosed = collapsed[moduleName];
+          Object.entries(filteredModules).map(([moduleName, tags]) => {
+            const isClosed = searchTerm.trim() ? false : collapsed[moduleName];
             return (
               <div key={moduleName} className="border border-clinical-800 rounded-md overflow-hidden bg-clinical-900/40">
                 <button
@@ -154,8 +214,8 @@ export const MetadataExplorer: React.FC<MetadataExplorerProps> = ({
                       <div key={tag.tag} className="p-2 hover:bg-clinical-800/30 flex items-start justify-between group">
                         <div className="space-y-0.5 min-w-0 pr-2">
                           <div className="flex items-center space-x-2">
-                            <span className="text-indigo-400 font-bold">{tag.tag}</span>
-                            <span className="text-clinical-300 font-semibold truncate">{tag.keyword}</span>
+                            <span className="text-indigo-400 font-bold">{highlightMatch(tag.tag, searchTerm)}</span>
+                            <span className="text-clinical-300 font-semibold truncate">{highlightMatch(tag.keyword, searchTerm)}</span>
                             <span className="text-[9px] px-1 py-0.2 rounded bg-clinical-800 text-clinical-400">
                               {tag.vr}
                             </span>
@@ -167,7 +227,7 @@ export const MetadataExplorer: React.FC<MetadataExplorerProps> = ({
                           </div>
                           <div className="text-[10px] text-clinical-500">{tag.name}</div>
                           <div className={`text-xs break-all ${tag.redacted ? 'text-amber-300/80 font-semibold' : 'text-clinical-100'}`}>
-                            {tag.value}
+                            {highlightMatch(tag.value, searchTerm)}
                           </div>
                         </div>
 
