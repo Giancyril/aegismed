@@ -1,3 +1,4 @@
+from app.services.tag_classifier import enrich_and_group_tags
 import os
 from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -64,8 +65,10 @@ def get_study_metadata(
             {"tag": "(0028,0030)", "vr": "DS", "keyword": "PixelSpacing", "name": "Pixel Spacing", "value": "0.75\0.75"}
         ]
 
+    grouped_modules = enrich_and_group_tags(tags)
     return {
         "study_instance_uid": study_instance_uid,
+        "modules": grouped_modules,
         "patient_id": study.patient_id,
         "patient_name": study.patient_name,
         "modality": study.modalities,
