@@ -44,6 +44,7 @@ class Series(Base):
 
     study = relationship("Study", back_populates="series")
     instances = relationship("Instance", back_populates="series", cascade="all, delete-orphan")
+    annotations = relationship("Annotation", back_populates="series", cascade="all, delete-orphan")
     jobs = relationship("ProcessingJob", back_populates="series", cascade="all, delete-orphan")
 
 class Instance(Base):
@@ -73,3 +74,20 @@ class ProcessingJob(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     series = relationship("Series", back_populates="jobs")
+
+class Annotation(Base):
+    __tablename__ = "annotations"
+
+    id = Column(String(64), primary_key=True, index=True)
+    series_instance_uid = Column(String(128), ForeignKey("series.series_instance_uid"), nullable=False)
+    slice_index = Column(Integer, default=0)
+    plane = Column(String(32), default="axial")
+    annotation_type = Column(String(32), nullable=False) # caliper, polygon, angle
+    label = Column(String(128), nullable=True)
+    unit = Column(String(16), default="mm")
+    measurement_value = Column(Float, nullable=False)
+    geometry = Column(JSON, nullable=False)
+    color = Column(String(32), default="#10b981")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    series = relationship("Series", back_populates="annotations")
