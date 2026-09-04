@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-clinical-950: #090a0d;
+  --color-clinical-900: #0e1117;
+  --color-clinical-850: #141820;
+  --color-clinical-800: #1a1f2c;
+  --color-clinical-750: #222838;
+  --color-clinical-700: #2d354a;
+  --color-clinical-600: #47536f;
+  --color-clinical-400: #8e9bb3;
+  --color-clinical-200: #d1d8e6;
+  --color-clinical-100: #f0f3fa;
+  
+  --color-organ-spleen: #8b5cf6;
+  --color-organ-liver: #3b82f6;
+  --color-organ-kidney-r: #10b981;
+  --color-organ-kidney-l: #06b6d4;
+  --color-organ-pancreas: #f59e0b;
+  --color-organ-lesion: #ef4444;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #090a0d;
+  color: #d1d8e6;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0e1117;
+}
+::-webkit-scrollbar-thumb {
+  background: #222838;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2d354a;
+}

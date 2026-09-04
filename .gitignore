@@ -1,0 +1,69 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv
+venv/
+ENV/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Medical Imaging Data & Large Volumes (Keep raw/large binaries out of git)
+*.dcm
+*.DCM
+*.dicom
+*.nii
+*.nii.gz
+*.mhd
+*.raw
+*.nrrd
+data/raw/
+data/processed/
+data/uploads/
+storage/
+
+# Model Checkpoints & Pretrained Weights
+*.pt
+*.pth
+*.onnx
+*.engine
+*.bin
+models_cache/
+monai_bundles/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
