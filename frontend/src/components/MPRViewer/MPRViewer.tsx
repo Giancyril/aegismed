@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MPRPanel } from './MPRPanel';
 import { useCrosshairSync } from '../../hooks/useCrosshairSync';
-import { LayoutGrid, Maximize2, RotateCcw, Sliders } from 'lucide-react';
+import { LayoutGrid, RotateCcw } from 'lucide-react';
 
 const PRESETS = [
   { id: 'soft', name: 'Soft Tissue', w: 400, l: 40 },

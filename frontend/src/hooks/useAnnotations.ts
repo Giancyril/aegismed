@@ -30,7 +30,6 @@ export function useAnnotations(seriesInstanceUid: string = '1.2.840.113619.2.55.
     }
   ]);
 
-  const [loading, setLoading] = useState(false);
 
   const fetchAnnotations = useCallback(async () => {
     try {

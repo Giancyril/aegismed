@@ -13,6 +13,7 @@ import { AnnotationToolbar, type AnnotationToolMode } from './components/Annotat
 import { useAnnotations } from './hooks/useAnnotations';
 import { UploadModal } from './components/Upload/UploadModal';
 import { initCornerstone } from './services/cornerstoneInit';
+import { LayoutGrid, Square, BrainCircuit, FileCode } from 'lucide-react';
 import type { PatientInfo, SeriesInfo, SegmentationLabel, JobStatus, ViewportTool, MprOrientation } from './types';
 
 export const App: React.FC = () => {
@@ -94,7 +95,7 @@ export const App: React.FC = () => {
   const [rightPanelTab, setRightPanelTab] = useState<'segmentation' | 'metadata'>('segmentation');
   const [viewMode, setViewMode] = useState<'single' | 'mpr'>('single');
   const [annMode, setAnnMode] = useState<AnnotationToolMode>('caliper');
-  const { annotations, addAnnotation, clearAnnotations, exportAnnotations } = useAnnotations(selectedSeries?.seriesInstanceUid);
+  const { annotations, clearAnnotations, exportAnnotations } = useAnnotations(selectedSeriesUid);
   const stream = useJobStream(activeJobId);
   const [jobStatus, setJobStatus] = useState<JobStatus>({
     jobId: 'job_49a8f2',
@@ -132,7 +133,7 @@ export const App: React.FC = () => {
     const newId = 'job_' + Math.random().toString(36).substring(7);
     setActiveJobId(newId);
     setJobStatus({
-      jobId: 'job_' + Math.random().toString(36).substring(7),
+      jobId: newId,
       status: 'preprocessing',
       progress: 25,
       message: 'Applying MONAI transforms (RAS reorientation, 1.5mm spacing)...',
@@ -162,7 +163,6 @@ export const App: React.FC = () => {
     }, 1000);
   };
 
-  
   // Synchronize WebSocket stream updates to local jobStatus state
   useEffect(() => {
     if (stream.stage && stream.stage !== 'idle') {
@@ -175,18 +175,20 @@ export const App: React.FC = () => {
     }
   }, [stream.stage, stream.progress, stream.message]);
 
+  const isBusy = jobStatus.status === 'preprocessing' || jobStatus.status === 'inferring' || jobStatus.status === 'postprocessing';
+
   return (
     <div className="flex flex-col h-screen w-screen bg-clinical-950 text-clinical-100 overflow-hidden font-sans">
       <Header patient={patient} onUploadClick={() => setIsUploadOpen(true)} />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <ThumbnailPanel
           seriesList={seriesList}
           selectedSeriesUid={selectedSeriesUid}
           onSelectSeries={setSelectedSeriesUid}
         />
 
-        <main className="flex-1 flex flex-col overflow-hidden bg-clinical-950">
+        <main className="flex-1 flex flex-col overflow-hidden bg-clinical-950 relative">
           <div className="px-3 py-1.5 bg-clinical-950 flex items-center justify-between border-b border-clinical-800">
             <AnnotationToolbar
               activeMode={annMode}
@@ -195,36 +197,118 @@ export const App: React.FC = () => {
               onClearAnnotations={clearAnnotations}
               onExportAnnotations={exportAnnotations}
             />
+
+            <div className="flex items-center space-x-2">
+              {/* View mode toggle */}
+              <div className="flex items-center bg-clinical-900 border border-clinical-750 rounded p-0.5 text-xs font-mono">
+                <button
+                  onClick={() => setViewMode('single')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors ${
+                    viewMode === 'single' ? 'bg-indigo-600 text-white shadow-xs' : 'text-clinical-400 hover:text-clinical-200'
+                  }`}
+                  title="Single 2D Viewport"
+                >
+                  <Square className="w-3.5 h-3.5" />
+                  <span>2D View</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('mpr')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors ${
+                    viewMode === 'mpr' ? 'bg-indigo-600 text-white shadow-xs' : 'text-clinical-400 hover:text-clinical-200'
+                  }`}
+                  title="Multi-Planar Reconstruction"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>3D MPR</span>
+                </button>
+              </div>
+
+              {/* Right Panel Tab Switcher */}
+              <div className="flex items-center bg-clinical-900 border border-clinical-750 rounded p-0.5 text-xs font-mono">
+                <button
+                  onClick={() => setRightPanelTab('segmentation')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors ${
+                    rightPanelTab === 'segmentation' ? 'bg-indigo-600 text-white shadow-xs' : 'text-clinical-400 hover:text-clinical-200'
+                  }`}
+                  title="AI Segmentation Panel"
+                >
+                  <BrainCircuit className="w-3.5 h-3.5" />
+                  <span>AI Masks</span>
+                </button>
+                <button
+                  onClick={() => setRightPanelTab('metadata')}
+                  className={`flex items-center space-x-1 px-2 py-1 rounded transition-colors ${
+                    rightPanelTab === 'metadata' ? 'bg-indigo-600 text-white shadow-xs' : 'text-clinical-400 hover:text-clinical-200'
+                  }`}
+                  title="DICOM Metadata Tag Explorer"
+                >
+                  <FileCode className="w-3.5 h-3.5" />
+                  <span>DICOM Tags</span>
+                </button>
+              </div>
+            </div>
           </div>
-          <Toolbar
-            activeTool={activeTool}
-            onSelectTool={setActiveTool}
-            orientation={orientation}
-            onSelectOrientation={setOrientation}
-            activePreset={activePreset}
-            onSelectPreset={setActivePreset}
-            sliceIndex={sliceIndex}
-            totalSlices={seriesList[0].numSlices}
-            onSliceChange={setSliceIndex}
-            onResetView={handleResetView}
-          />
-          <Viewport
-            sliceIndex={sliceIndex}
-            totalSlices={seriesList[0].numSlices}
-            activePreset={activePreset}
-            activeTool={activeTool}
-            orientation={orientation}
-            labels={labels}
-          />
+
+          {viewMode === 'mpr' ? (
+            <div className="flex-1 overflow-hidden p-2">
+              <MPRViewer seriesInstanceUid={selectedSeriesUid} />
+            </div>
+          ) : (
+            <>
+              <Toolbar
+                activeTool={activeTool}
+                onSelectTool={setActiveTool}
+                orientation={orientation}
+                onSelectOrientation={setOrientation}
+                activePreset={activePreset}
+                onSelectPreset={setActivePreset}
+                sliceIndex={sliceIndex}
+                totalSlices={seriesList[0].numSlices}
+                onSliceChange={setSliceIndex}
+                onResetView={handleResetView}
+              />
+              <Viewport
+                sliceIndex={sliceIndex}
+                totalSlices={seriesList[0].numSlices}
+                activePreset={activePreset}
+                activeTool={activeTool}
+                orientation={orientation}
+                labels={labels}
+              />
+            </>
+          )}
+
+          {/* Live Progress Overlay for background inferencing/preprocessing */}
+          {isBusy && (
+            <div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-xs flex items-center justify-center p-6 pointer-events-none">
+              <div className="w-full max-w-md pointer-events-auto">
+                <LiveProgressOverlay
+                  stage={stream.stage || jobStatus.status}
+                  progress={stream.progress || jobStatus.progress}
+                  message={stream.message || jobStatus.message}
+                  isConnected={stream.isConnected}
+                />
+              </div>
+            </div>
+          )}
         </main>
 
-        <SegmentationPanel
-          labels={labels}
-          onToggleLabel={handleToggleLabel}
-          onOpacityChange={handleOpacityChange}
-          jobStatus={jobStatus}
-          onRunInference={handleRunInference}
-        />
+        {rightPanelTab === 'metadata' ? (
+          <aside className="w-80 bg-[#0d1017] border-l border-clinical-750 flex flex-col h-[calc(100vh-3rem-2rem)] select-none">
+            <MetadataExplorer
+              studyInstanceUid={selectedSeriesUid}
+              onClose={() => setRightPanelTab('segmentation')}
+            />
+          </aside>
+        ) : (
+          <SegmentationPanel
+            labels={labels}
+            onToggleLabel={handleToggleLabel}
+            onOpacityChange={handleOpacityChange}
+            jobStatus={jobStatus}
+            onRunInference={handleRunInference}
+          />
+        )}
       </div>
 
       <JobStatusBar status={jobStatus} isStreaming={stream.isConnected} />

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, Loader2 } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
 import type { JobStatus } from '../../types';
 
 interface JobStatusBarProps {

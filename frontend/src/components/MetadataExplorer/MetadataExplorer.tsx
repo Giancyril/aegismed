@@ -150,7 +150,7 @@ export const MetadataExplorer: React.FC<MetadataExplorerProps> = ({
             DICOM Metadata Explorer
           </span>
           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-clinical-800 text-clinical-300">
-            {totalTagCount} tags
+            {searchTerm ? `${matchingTagCount} of ${totalTagCount} tags` : `${totalTagCount} tags`}
           </span>
         </div>
 
